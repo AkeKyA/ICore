@@ -1,0 +1,6 @@
+#Cancle id block
+block-NoUpdate: ["8","9","10","11","12"]
+#Cancle PvP in world
+world-NoPvP: ["Hub2","HZ1"]
+#Cancle Break,Place Block
+block-CancleBP: ["Hub2","PVP1"]

@@ -1,0 +1,52 @@
+name: ICore
+main: AkeKy\icore
+version: 1.0.0
+api:
+- 1.12.0
+- 2.0.0
+load: STARTUP
+author: PocketMine Team
+authors: [rewrite by AkeKy]
+description: Prevents people to impersonate an account, requering registration and login when connecting.
+commands:
+ rank:
+  permission: rank
+  description: '§bRanks'
+ vip:
+  permission: vip
+  description: '§bHow to donate'
+ ru:
+  permission: ru
+  description: '§bRule'
+ spawn:
+  permission: spawn
+  description: '§bTP to Spawn'
+ fe:
+  permission: fe
+  description: '§bEnable Fly'
+ fd:
+  permission: fd
+  description: '§bDisable Fly'
+ ve:
+  permission: ve
+  description: '§bEnable Hidden'
+ vd:
+  permission: vd
+  description: '§bDisable Hidden'
+permissions:
+ rank:
+  default: true
+ vip:
+  default: true
+ ru:
+  default: true
+ spawn:
+  default: true
+ fe:
+  default: op
+ fd:
+  default: op
+ ve:
+  default: op
+ vd:
+  default: op
