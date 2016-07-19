@@ -150,7 +150,11 @@ class EventListener implements Listener{
             $killer = $cause->getDamager();
             if($killer instanceof Player){
                 $this->economy->addMoney($killer->getName(), 100);
-                $killer->sendMessage('§b- §eYou earn §a100 §bCoins§e.');
+                $this->economy->addMoney($event->getPlayer()->getName(), 25);
+                $event->getPlayer()->sendMessage('§b- §aYou kill by §c'.$killer->getName().'§a.');
+                $event->getPlayer()->sendMessage('    §eYou earn §a25 §bCoins§e.');
+                $killer->sendMessage('§b- §eYou kill §6'.$event->getPlayer()->getName().'§e.');
+                $killer->sendMessage('    §eYou earn §a100 §bCoins§e.');
                 $killer->setHealth(20);
             }
         }
