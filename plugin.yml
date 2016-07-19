@@ -1,5 +1,5 @@
 name: ICore
-main: AkeKy\icore
+main: AkeKy\ICore
 version: 1.0.0
 api:
 - 1.12.0
@@ -9,6 +9,12 @@ author: PocketMine Team
 authors: [rewrite by AkeKy]
 description: Prevents people to impersonate an account, requering registration and login when connecting.
 commands:
+ login:
+  permission: login
+  description: "§bLogs into an account"
+ register:
+  permission: register
+  description: "§bRegisters an account"
  rank:
   permission: rank
   description: '§bRanks'
@@ -34,6 +40,10 @@ commands:
   permission: vd
   description: '§bDisable Hidden'
 permissions:
+ login:
+  default: true
+ register:
+  default: true
  rank:
   default: true
  vip:

@@ -1,161 +1,269 @@
 <?php
+
 namespace AkeKy;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\entity\Effect;
-use pocketmine\event\entity\EntityDamageByEntityEvent;
-use pocketmine\event\entity\EntityDamageEvent;
-use pocketmine\event\Listener;
-use pocketmine\event\block\BlockBreakEvent;
-use pocketmine\event\block\BlockPlaceEvent;
-use pocketmine\event\block\BlockUpdateEvent;
-use pocketmine\event\block\SignChangeEvent;
-use pocketmine\event\player\PlayerDeathEvent;
-use pocketmine\event\player\PlayerInteractEvent;
-use pocketmine\event\player\PlayerLoginEvent;
-use pocketmine\event\player\PlayerMoveEvent;
+use pocketmine\IPlayer;
+use pocketmine\utils\Config;
+use pocketmine\permission\PermissionAttachment;
+use pocketmine\permission\Permission;
 use pocketmine\Player;
+use pocketmine\Server;
 use pocketmine\plugin\PluginBase;
-use pocketmine\tile\Sign;
+use AkeKy\event\PlayerAuthenticateEvent;
+use AkeKy\event\PlayerDeauthenticateEvent;
+use AkeKy\event\PlayerRegisterEvent;
+use AkeKy\event\PlayerUnregisterEvent;
+use AkeKy\provider\DataProvider;
+use AkeKy\provider\DummyDataProvider;
+use AkeKy\provider\MySQLDataProvider;
+use AkeKy\provider\SQLite3DataProvider;
+use AkeKy\provider\YAMLDataProvider;
 
+class ICore extends PluginBase{
 
-class icore extends PluginBase implements Listener{
+    /** @var PermissionAttachment[] */
+    protected $needAuth = [];
 
-	public function onEnable(){
-        $this->getServer()->getPluginManager()->registerEvents($this, $this);
-		$this->saveDefaultConfig();
-		$this->reloadConfig();
-		$this->canclebp = $this->getConfig()->get("block-CancleBP");
-		$this->blocknoupdate = $this->getConfig()->get("block-NoUpdate");
-		$this->worldnopvp = $this->getConfig()->get("world-NoPvP");
-        $this->economy = $this->getServer()->getPluginManager()->getPlugin("EconomyAPI");
-        $this->getLogger()->info("§aPvPWorlds loaded!");
-        $this->getLogger()->info("§aBlockFreezer loaded!");
-        $this->getLogger()->info("§aKillForMoney loaded!");
-        $this->getLogger()->info("§aSimpleAuth loaded!");
-        $this->getLogger()->info("§aVIPSlots loaded!");
-        $this->getLogger()->info("§aBroadcaster loaded!");
-        $this->getLogger()->info("§aChatDefender loaded!");
-        $this->getLogger()->info("§aLevelManager loaded!");
-        $this->getLogger()->info("§cE§6v§ee§ar§by§dt§ch§6i§en§ag §floaded!");
-	}
+    /** @var EventListener */
+    protected $listener;
 
-	public function onDisable(){
+    /** @var DataProvider */
+    protected $provider;
 
-	}
+    protected $blockPlayers = 6;
+    protected $blockSessions = [];
 
-    public function onPlayerLogin(PlayerLoginEvent $event){
-        $event->getPlayer()->teleport($this->getServer()->getDefaultLevel()->getSafeSpawn());
+    /** @var string[] */
+    protected $messages = [];
+
+    /**
+     * @api
+     *
+     * @param Player $player
+     *
+     * @return bool
+     */
+    public function isPlayerAuthenticated(Player $player){
+        return !isset($this->needAuth[spl_object_hash($player)]);
     }
 
-	public function onPlayerMove(PlayerMoveEvent $event){
-        if($event->isCancelled() or $event->getPlayer()->isCreative() or $event->getPlayer()->isSpectator() or $event->getPlayer()->getAllowFlight() or $event->getPlayer()->hasEffect(Effect::JUMP)){
+    /**
+     * @api
+     *
+     * @param IPlayer $player
+     *
+     * @return bool
+     */
+    public function isPlayerRegistered(IPlayer $player){
+        return $this->provider->isPlayerRegistered($player);
+    }
+
+    /**
+     * @api
+     *
+     * @param Player $player
+     *
+     * @return bool True if call not blocked
+     */
+    public function authenticatePlayer(Player $player){
+        if($this->isPlayerAuthenticated($player)){
+            $player->sendMessage('§6- §aYou have been authenticated by §fIP');
+            return true;
+        }
+
+        $this->getServer()->getPluginManager()->callEvent($ev = new PlayerAuthenticateEvent($this, $player));
+        if($ev->isCancelled()){
+            return false;
+        }
+
+        if(isset($this->needAuth[spl_object_hash($player)])){
+            $attachment = $this->needAuth[spl_object_hash($player)];
+            $player->removeAttachment($attachment);
+            unset($this->needAuth[spl_object_hash($player)]);
+        }
+        $this->provider->updatePlayer($player, $player->getUniqueId()->toString());
+        $player->sendMessage('§6- §aYou have been authenticated.');
+
+        unset($this->blockSessions[$player->getAddress() . ":" . strtolower($player->getName())]);
+
+        return true;
+    }
+
+    /**
+     * @api
+     *
+     * @param Player $player
+     *
+     * @return bool True if call not blocked
+     */
+    public function deauthenticatePlayer(Player $player){
+        if(!$this->isPlayerAuthenticated($player)){
+            return true;
+        }
+
+        $this->getServer()->getPluginManager()->callEvent($ev = new PlayerDeauthenticateEvent($this, $player));
+        if($ev->isCancelled()){
+            return false;
+        }
+
+        $attachment = $player->addAttachment($this);
+        $this->needAuth[spl_object_hash($player)] = $attachment;
+
+        $this->sendAuthenticateMessage($player);
+
+        return true;
+    }
+
+    public function tryAuthenticatePlayer(Player $player){
+        if($this->blockPlayers <= 0 and $this->isPlayerAuthenticated($player)){
             return;
+        }
+
+        if(count($this->blockSessions) > 2048){
+            $this->blockSessions = [];
+        }
+
+        if(!isset($this->blockSessions[$player->getAddress()])){
+            $this->blockSessions[$player->getAddress() . ":" . strtolower($player->getName())] = 1;
         }else{
-            if($event->getPlayer()->getInAirTicks() >= 60){
-                $event->getPlayer()->kick('§l§cYou have been kicked for fly hacks!§r §o§6Please disable mods to play.§r', false);
-            }
+            $this->blockSessions[$player->getAddress() . ":" . strtolower($player->getName())]++;
+        }
+
+        if($this->blockSessions[$player->getAddress() . ":" . strtolower($player->getName())] > $this->blockPlayers){
+            $player->kick('§cToo many tries!', true);
+            $this->getServer()->getNetwork()->blockAddress($player->getAddress(), 600);
         }
     }
 
-	public function onBlockBreak(BlockBreakEvent $event){
-        if(in_array($event->getPlayer()->getLevel()->getFolderName(), $this->canclebp)){
-            if(!$event->getPlayer()->isOp()){
-                $event->setCancelled(true);
-            }
-        }
-	}
-
-	public function onBlockPlace(BlockPlaceEvent $event){
-        if(in_array($event->getPlayer()->getLevel()->getFolderName(), $this->canclebp)){
-            if(!$event->getPlayer()->isOp()){
-                $event->setCancelled(true);
-            }
-        }
-	}
-
-    public function onBlockUpdate(BlockUpdateEvent $event){
-        if(in_array($event->getBlock()->getId(), $this->blocknoupdate)){
-            $event->setCancelled(true);
-        }
-    }
-
-    public function onPvP(EntityDamageEvent $event){
-    	if($event instanceof EntityDamageByEntityEvent){
-    		if($event->getEntity() instanceof Player && $event->getDamager() instanceof Player){
-    			if(in_array($event->getEntity()->getLevel()->getFolderName(), $this->worldnopvp)){
-    				$event->setCancelled(true);
-    			}
-    		}
-    	}
-    }
-
-    public function onPlayerDeath(PlayerDeathEvent $event){
-        $cause = $event->getEntity()->getLastDamageCause();
-        if($cause instanceof EntityDamageByEntityEvent){
-            $killer = $cause->getDamager();
-            if($killer instanceof Player){
-                $this->economy->addMoney($killer->getName(), 100);
-                $killer->sendMessage('§b- §eYou earn §a100 §bCoins§e.');
-                $killer->setHealth(20);
-            }
-        }
-    }
-
-    public function playerBlockTouch(PlayerInteractEvent $event){
-        if($event->getBlock()->getID() === 323 || $event->getBlock()->getID() === 63 || $event->getBlock()->getID() === 68){
-            $sign = $event->getPlayer()->getLevel()->getTile($event->getBlock());
-            if(!($sign instanceof Sign)){
-                return;
-            }
-            $sign = $sign->getText();
-            if($sign[0] === '§l§aWORLD'){
-                if(empty($sign[1]) !== true){
-                    $mapname = $sign[1];
-                    if($this->getServer()->loadLevel($mapname) !== false){
-                        $event->getPlayer()->sendMessage('§aTeleporting...');
-                        $event->getPlayer()->teleport($this->getServer()->getLevelByName($mapname)->getSafeSpawn());
-                    }else{
-                        $event->getPlayer()->sendMessage("[SignPortal] World '".$mapname."' not found.");
-                    }
-                }
-            }
-        }
-    }
-
-    public function tileupdate(SignChangeEvent $event){
-        if($event->getBlock()->getID() === 323 || $event->getBlock()->getID() === 63 || $event->getBlock()->getID() === 68){
-            $sign = $event->getPlayer()->getLevel()->getTile($event->getBlock());
-            if(!($sign instanceof Sign)){
-                return true;
-            }
-            $sign = $event->getLines();
-            if($sign[0] === '§l§aWORLD'){
-                if($event->getPlayer()->isOp()){
-                    if(empty($sign[1]) !== true){
-                        if($this->getServer()->loadLevel($sign[1]) !== false){
-                            $event->getPlayer()->sendMessage("[SignPortal] Portal to world '".$sign[1]."' created");
-                            return true;
-                        }
-                        $event->getPlayer()->sendMessage("[SignPortal] World '".$sign[1]."' does not exist!");
-                        $event->setLine(0,"[BROKEN]");
-                        return false;
-                    }
-                    $event->getPlayer()->sendMessage("[SignPortal] World name not set");
-                    $event->setLine(0,"[BROKEN]");
-                    return false;
-                }
-                $event->getPlayer()->sendMessage("[SignPortal] You must be an OP to make a portal");
-                $event->setLine(0,"[BROKEN]");
+    /**
+     * @api
+     *
+     * @param IPlayer $player
+     * @param string  $password
+     *
+     * @return bool
+     */
+    public function registerPlayer(IPlayer $player, $password){
+        if(!$this->isPlayerRegistered($player)){
+            $this->getServer()->getPluginManager()->callEvent($ev = new PlayerRegisterEvent($this, $player));
+            if($ev->isCancelled()){
                 return false;
             }
+            $this->provider->registerPlayer($player, $this->hash(strtolower($player->getName()), $password));
+            return true;
         }
+        return false;
+    }
+
+    /**
+     * @api
+     *
+     * @param IPlayer $player
+     *
+     * @return bool
+     */
+    public function unregisterPlayer(IPlayer $player){
+        if($this->isPlayerRegistered($player)){
+            $this->getServer()->getPluginManager()->callEvent($ev = new PlayerUnregisterEvent($this, $player));
+            if($ev->isCancelled()){
+                return false;
+            }
+            $this->provider->unregisterPlayer($player);
+        }
+
         return true;
+    }
+
+    /**
+     * @api
+     *
+     * @param DataProvider $provider
+     */
+    public function setDataProvider(DataProvider $provider){
+        $this->provider = $provider;
+    }
+
+    /**
+     * @api
+     *
+     * @return DataProvider
+     */
+    public function getDataProvider(){
+        return $this->provider;
+    }
+
+    /* -------------------------- Non-API part -------------------------- */
+
+    public function closePlayer(Player $player){
+        unset($this->needAuth[spl_object_hash($player)]);
+    }
+
+    public function sendAuthenticateMessage(Player $player){
+        $config = $this->provider->getPlayer($player);
+        if($config === null){
+            $player->sendMessage("§a===============================\n§a- §bWelcome §3to §6Orange§aCraft §fNetwork§c!\n§a- §cThis account not §6register.\n§a- §bRegister using §e/register <password>\n§a===============================");
+        }else{
+            $player->sendMessage("§a===============================\n§a- §bWelcome §3to §6Orange§aCraft §fNetwork§c!\n§a- §bThis account §aregister.\n§a- §bLogin using §e/login <password>\n§a===============================");
+        }
     }
 
     public function onCommand(CommandSender $sender, Command $command, $label, array $args){
         switch($command->getName()){
+            case "login":
+                if($sender instanceof Player){
+                    if(!$this->isPlayerRegistered($sender) or ($data = $this->provider->getPlayer($sender)) === null){
+                        $sender->sendMessage('§cThis account is not registered.');
+                        return true;
+                    }
+                    if(count($args) !== 1){
+                        $sender->sendMessage('§cUsage: '.$command->getUsage());
+                        return true;
+                    }
+
+                    $password = implode(" ", $args);
+
+                    if(hash_equals($data["hash"], $this->hash(strtolower($sender->getName()), $password)) and $this->authenticatePlayer($sender)){
+                        return true;
+                    }else{
+                        $this->tryAuthenticatePlayer($sender);
+                        $sender->sendMessage('§cIncorrect password!');
+
+                        return true;
+                    }
+                }else{
+                    $sender->sendMessage('§cThis command only works in-game.');
+
+                    return true;
+                }
+                break;
+            case "register":
+                if($sender instanceof Player){
+                    if($this->isPlayerRegistered($sender)){
+                        $sender->sendMessage('§cThis account is already registered.');
+                        return true;
+                    }
+
+                    $password = implode(" ", $args);
+                    if(strlen($password) < 6){
+                        $sender->sendMessage('§cYour password is too short!');
+                        return true;
+                    }
+
+                    if($this->registerPlayer($sender, $password) and $this->authenticatePlayer($sender)){
+                        return true;
+                    }else{
+                        $sender->sendMessage('§cError during authentication.');
+                        return true;
+                    }
+                }else{
+                    $sender->sendMessage('§cThis command only works in-game.');
+
+                    return true;
+                }
+                break;
             case "rank":
                 $sender->sendMessage(' ');
                 $sender->sendMessage('§fยศทั้งหมดที่มีในเซิฟ');
@@ -223,5 +331,56 @@ class icore extends PluginBase implements Listener{
                 break;
         }
         return false;
+    }
+
+    public function onEnable(){
+        $this->saveDefaultConfig();
+        $this->reloadConfig();
+
+        $this->blockPlayers = (int) $this->getConfig()->get("blockAfterFail", 6);
+
+        $provider = $this->getConfig()->get("dataProvider");
+        unset($this->provider);
+        switch(strtolower($provider)){
+            case "yaml":
+                $this->getLogger()->info("§aUsing YAML data provider");
+                $provider = new YAMLDataProvider($this);
+                break;
+            case "sqlite3":
+                $this->getLogger()->info("§aUsing SQLite3 data provider");
+                $provider = new SQLite3DataProvider($this);
+                break;
+            case "mysql":
+                $this->getLogger()->info("§aUsing MySQL data provider");
+                $provider = new MySQLDataProvider($this);
+                break;
+            case "none":
+            default:
+                $provider = new SQLite3DataProvider($this);
+                break;
+        }
+
+        if(!isset($this->provider) or !($this->provider instanceof DataProvider)){ //Fix for getting a Dummy provider
+            $this->provider = $provider;
+        }
+
+        $this->listener = new EventListener($this);
+        $this->getServer()->getPluginManager()->registerEvents($this->listener, $this);
+
+        foreach($this->getServer()->getOnlinePlayers() as $player){
+            $this->deauthenticatePlayer($player);
+        }
+
+        $this->getLogger()->info("§bEverything loaded!");
+    }
+
+    public function onDisable(){
+        $this->getServer()->getPluginManager();
+        $this->provider->close();
+        $this->blockSessions = [];
+    }
+
+    private function hash($salt, $password){
+        return bin2hex(hash("sha512", $password . $salt, true) ^ hash("whirlpool", $salt . $password, true));
     }
 }
