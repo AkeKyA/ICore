@@ -1,6 +1,6 @@
 <?php
 
-namespace AkeKy\provider;
+namespace AkeKy\provider\SimpleAuth;
 
 use pocketmine\IPlayer;
 use pocketmine\utils\Config;

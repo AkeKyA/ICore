@@ -16,11 +16,11 @@ use AkeKy\event\PlayerAuthenticateEvent;
 use AkeKy\event\PlayerDeauthenticateEvent;
 use AkeKy\event\PlayerRegisterEvent;
 use AkeKy\event\PlayerUnregisterEvent;
-use AkeKy\provider\DataProvider;
-use AkeKy\provider\DummyDataProvider;
-use AkeKy\provider\MySQLDataProvider;
-use AkeKy\provider\SQLite3DataProvider;
-use AkeKy\provider\YAMLDataProvider;
+use AkeKy\provider\SimpleAuth\DataProvider;
+use AkeKy\provider\SimpleAuth\DummyDataProvider;
+use AkeKy\provider\SimpleAuth\MySQLDataProvider;
+use AkeKy\provider\SimpleAuth\SQLite3DataProvider;
+use AkeKy\provider\SimpleAuth\YAMLDataProvider;
 
 class ICore extends PluginBase{
 

@@ -1,9 +1,10 @@
 <?php
 
-namespace AkeKy\provider;
+namespace AkeKy\provider\SimpleAuth;
 
 use pocketmine\IPlayer;
 use AkeKy\ICore;
+use AkeKy\provider\SimpleAuth\DummyDataProvider;
 use AkeKy\task\MySQLPingTask;
 
 class MySQLDataProvider implements DataProvider{
