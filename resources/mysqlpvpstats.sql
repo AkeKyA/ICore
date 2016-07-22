@@ -1,5 +1,0 @@
-CREATE TABLE IF NOT EXISTS pvp_stats (
-    name VARCHAR(255) PRIMARY KEY,
-    kills INT DEFAULT 0,
-    deaths INT DEFAULT 0
-);

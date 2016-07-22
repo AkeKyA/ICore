@@ -22,10 +22,6 @@ use AkeKy\provider\SimpleAuth\MySQLDataProvider;
 use AkeKy\provider\SimpleAuth\SQLite3DataProvider;
 use AkeKy\provider\SimpleAuth\YAMLDataProvider;
 
-use AkeKy\provider\PvPStats\ProviderInterface;
-use AkeKy\provider\PvPStats\YAMLProvider;
-use AkeKy\provider\PvPStats\MySQLProvider;
-
 class ICore extends PluginBase{
 
     /** @var PermissionAttachment[] */
@@ -35,13 +31,7 @@ class ICore extends PluginBase{
     protected $listener;
 
     /** @var DataProvider */
-    protected $psimpleauth;
-
-    protected $ppvpstats;
-
-    protected $othercommandformat;
-
-    protected $selfcommandformat;
+    protected $provider;
 
     protected $blockPlayers = 6;
     protected $blockSessions = [];
@@ -68,7 +58,7 @@ class ICore extends PluginBase{
      * @return bool
      */
     public function isPlayerRegistered(IPlayer $player){
-        return $this->psimpleauth->isPlayerRegistered($player);
+        return $this->provider->isPlayerRegistered($player);
     }
 
     /**
@@ -94,7 +84,7 @@ class ICore extends PluginBase{
             $player->removeAttachment($attachment);
             unset($this->needAuth[spl_object_hash($player)]);
         }
-        $this->psimpleauth->updatePlayer($player, $player->getUniqueId()->toString());
+        $this->provider->updatePlayer($player, $player->getUniqueId()->toString());
         $player->sendMessage('§6- §aYou have been authenticated.');
 
         unset($this->blockSessions[$player->getAddress() . ":" . strtolower($player->getName())]);
@@ -162,7 +152,7 @@ class ICore extends PluginBase{
             if($ev->isCancelled()){
                 return false;
             }
-            $this->psimpleauth->registerPlayer($player, $this->hash(strtolower($player->getName()), $password));
+            $this->provider->registerPlayer($player, $this->hash(strtolower($player->getName()), $password));
             return true;
         }
         return false;
@@ -181,7 +171,7 @@ class ICore extends PluginBase{
             if($ev->isCancelled()){
                 return false;
             }
-            $this->psimpleauth->unregisterPlayer($player);
+            $this->provider->unregisterPlayer($player);
         }
 
         return true;
@@ -190,10 +180,10 @@ class ICore extends PluginBase{
     /**
      * @api
      *
-     * @param DataProvider $psimpleauth
+     * @param DataProvider $provider
      */
-    public function setSimpleAuthDataProvider(DataProvider $psimpleauth){
-        $this->psimpleauth = $psimpleauth;
+    public function setDataProvider(DataProvider $provider){
+        $this->provider = $provider;
     }
 
     /**
@@ -201,28 +191,8 @@ class ICore extends PluginBase{
      *
      * @return DataProvider
      */
-    public function getSimpleAuthDataProvider(){
-        return $this->psimpleauth;
-    }
-
-    public function getPvPStatsProvider(){
-        return $this->ppvpstats;
-    }
-
-    public function playerExists(IPlayer $player) {
-        return $this->ppvpstats->playerExists($player);
-    }
-    
-    public function addPlayer(IPlayer $player) {
-        return $this->ppvpstats->addPlayer($player);
-    }
-    
-    public function removePlayer(IPlayer $player) {
-        return $this->ppvpstats->removePlayer($player);
-    }
-    
-    public function updatePlayer(IPlayer $player, $type) {
-        return $this->ppvpstats->updatePlayer($player, $type);
+    public function getDataProvider(){
+        return $this->provider;
     }
 
     /* -------------------------- Non-API part -------------------------- */
@@ -232,7 +202,7 @@ class ICore extends PluginBase{
     }
 
     public function sendAuthenticateMessage(Player $player){
-        $config = $this->psimpleauth->getPlayer($player);
+        $config = $this->provider->getPlayer($player);
         if($config === null){
             $player->sendMessage("§a===============================\n§a- §bWelcome §3to §6Orange§aCraft §fNetwork§c!\n§a- §cThis account not §6register.\n§a- §bRegister using §e/register <password>\n§a===============================");
         }else{
@@ -244,7 +214,7 @@ class ICore extends PluginBase{
         switch($command->getName()){
             case "login":
                 if($sender instanceof Player){
-                    if(!$this->isPlayerRegistered($sender) or ($data = $this->psimpleauth->getPlayer($sender)) === null){
+                    if(!$this->isPlayerRegistered($sender) or ($data = $this->provider->getPlayer($sender)) === null){
                         $sender->sendMessage('§cThis account is not registered.');
                         return true;
                     }
@@ -359,30 +329,6 @@ class ICore extends PluginBase{
                 $sender->removeEffect(Effect::INVISIBILITY);
                 $sender->sendMessage('§eHidden §cDisable§f!');
                 break;
-            case "stats":
-                if(isset($args[0])){
-                    $name = $args[0];
-                    if($this->ppvpstats->getData($name) !== null){
-                        if($this->ppvpstats->getData($name)["kills"] >= 1 and $this->ppvpstats->getData($name)["deaths"] >= 1){
-                            $sender->sendMessage(str_replace(array("@player", "@kills", "@deaths", "@kdratio"), array($name, $this->ppvpstats->getData($name)["kills"], $this->ppvpstats->getData($name)["deaths"], (round((($this->ppvpstats->getData($name)["kills"]) / ($this->ppvpstats->getData($name)["deaths"])), 3))), $this->othercommandformat));
-                        }else{
-                            $sender->sendMessage(str_replace(array("@player", "@kills", "@deaths", "@kdratio"), array($name, $this->ppvpstats->getData($name)["kills"], $this->ppvpstats->getData($name)["deaths"], ("§r§cN§r§7/§r§cA§r")), $this->othercommandformat));
-                        }
-                    }else{
-                        $sender->sendMessage('Sorry, stats for '.$name.' dont exist.');
-                    }
-                }else{
-                    if($sender instanceof Player){
-                        if($this->ppvpstats->getPlayer($sender)["kills"] >= 1 and $this->ppvpstats->getPlayer($sender)["deaths"] >= 1){
-                            $sender->sendMessage(str_replace(array("@kills", "@deaths", "@kdratio"), array($this->ppvpstats->getPlayer($sender)["kills"], $this->ppvpstats->getPlayer($sender)["deaths"], (round(($this->ppvpstats->getPlayer($sender)["kills"] / $this->ppvpstats->getPlayer($sender)["deaths"]), 3))), $this->selfcommandformat));
-                        }else{
-                            $sender->sendMessage(str_replace(array("@kills", "@deaths", "@kdratio"), array($this->ppvpstats->getPlayer($sender)["kills"], $this->ppvpstats->getPlayer($sender)["deaths"], ("§r§cN§r§7/§r§cA§r")), $this->selfcommandformat));
-                        }
-                    }else{
-                        $sender->sendMessage('§cPlease run this command in-game!');
-                    }
-                }
-                break;
         }
         return false;
     }
@@ -392,49 +338,30 @@ class ICore extends PluginBase{
         $this->reloadConfig();
 
         $this->blockPlayers = (int) $this->getConfig()->get("blockAfterFail", 6);
-        $this->othercommandformat = $this->getConfig()->get("other-command-format");
-        $this->selfcommandformat = $this->getConfig()->get("self-command-format");
 
-        $ppvpstats = $this->getConfig()->get("PvPStatsdataProvider");
-        unset($this->ppvpstats);
-        switch(strtolower($ppvpstats)){
-            case "yaml":
-                $ppvpstats = new YAMLProvider($this);
-                break;
-            case "mysql":
-                $ppvpstats = new MySQLProvider($this);
-                break;
-        }
-        if(!isset($this->ppvpstats) or !($this->ppvpstats instanceof ProviderInterface)){
-            $this->ppvpstats = $ppvpstats;
-        }else{
-            $this->getLogger()->critical("§cData PvPStats Provider error!");
-            $this->getServer()->getPluginManager()->disablePlugin($this);
-        }
-
-        $psimpleauth = $this->getConfig()->get("SimpleAuthdataProvider");
-        unset($this->psimpleauth);
-        switch(strtolower($psimpleauth)){
+        $provider = $this->getConfig()->get("dataProvider");
+        unset($this->provider);
+        switch(strtolower($provider)){
             case "yaml":
                 $this->getLogger()->info("§aUsing YAML data provider");
-                $psimpleauth = new YAMLDataProvider($this);
+                $provider = new YAMLDataProvider($this);
                 break;
             case "sqlite3":
                 $this->getLogger()->info("§aUsing SQLite3 data provider");
-                $psimpleauth = new SQLite3DataProvider($this);
+                $provider = new SQLite3DataProvider($this);
                 break;
             case "mysql":
                 $this->getLogger()->info("§aUsing MySQL data provider");
-                $psimpleauth = new MySQLDataProvider($this);
+                $provider = new MySQLDataProvider($this);
                 break;
             case "none":
             default:
-                $psimpleauth = new SQLite3DataProvider($this);
+                $provider = new SQLite3DataProvider($this);
                 break;
         }
 
-        if(!isset($this->psimpleauth) or !($this->psimpleauth instanceof DataProvider)){ //Fix for getting a Dummy provider
-            $this->psimpleauth = $psimpleauth;
+        if(!isset($this->provider) or !($this->provider instanceof DataProvider)){ //Fix for getting a Dummy provider
+            $this->provider = $provider;
         }
 
         $this->listener = new EventListener($this);
@@ -449,7 +376,7 @@ class ICore extends PluginBase{
 
     public function onDisable(){
         $this->getServer()->getPluginManager();
-        $this->psimpleauth->close();
+        $this->provider->close();
         $this->blockSessions = [];
     }
 
