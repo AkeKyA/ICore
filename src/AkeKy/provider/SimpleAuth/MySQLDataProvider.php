@@ -18,7 +18,7 @@ class MySQLDataProvider implements DataProvider{
 
 	public function __construct(ICore $plugin){
 		$this->plugin = $plugin;
-		$config = $this->plugin->getConfig()->get("dataProviderSettings");
+		$config = $this->plugin->getConfig()->get("SimpleAuthdataProvider");
 
 		if(!isset($config["host"]) or !isset($config["user"]) or !isset($config["password"]) or !isset($config["database"])){
 			$this->plugin->getLogger()->critical("Invalid MySQL settings");

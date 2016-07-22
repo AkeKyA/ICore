@@ -18,6 +18,21 @@ block-CancleBP: ["Hub2","PVP1"]
 #####################################################################################
 #####################################################################################
 #####################################################################################
+PvPStatsdataProvider: yaml
+mysql-settings:
+    host: "127.0.0.1"
+    port: 3306
+    user: "user"
+    password: "password"
+    database: "databaseName"
+#
+#Color Symbol
+color-symbol: "§"
+#
+#/stats Command format
+other-command-format: "§r§l§b@player§r§6('s) Stats:\n§r§o§e- §r§aKills: §r§l§6@kills\n§r§o§e- §r§aDeaths: §r§l§6@deaths\n§r§o§e- §r§aK-D Ratio: §r§l§6@kdratio"
+self-command-format: "§r§6Your Stats:\n§r§o§e- §r§aKills: §r§l§6@kills\n§r§o§e- §r§aDeaths: §r§l§6@deaths\n§r§o§e- §r§aK-D Ratio: §r§l§6@kdratio"
+
 #####################################################################################
 #####################################################################################
 #####################################################################################
@@ -27,7 +42,7 @@ block-CancleBP: ["Hub2","PVP1"]
 #Sets the data provider (yaml, sqlite3, mysql, none).
 #Only use none when there is another plugin that will integrate its dataProvider with SimpleAuth
 #Be aware that data is not automatically moved between data providers.
-dataProvider: yaml
+SimpleAuthdataProvider: yaml
 
 #For MySQL:
 #dataProviderSettings:
