@@ -5,7 +5,7 @@ namespace AkeKy\provider\PvPStats;
 use pocketmine\utils\Config;
 use pocketmine\IPlayer;
 
-use CrazedMiner\Main;
+use AkeKy\ICore;
 
 class MYSQLProvider implements ProviderInterface {
 
@@ -13,7 +13,7 @@ class MYSQLProvider implements ProviderInterface {
 
     protected $database;
 
-    public function __construct(Main $plugin) {
+    public function __construct(ICore $plugin) {
         $this->plugin = $plugin;        
         $settings = $this->plugin->getConfig()->get("mysql-settings");
         

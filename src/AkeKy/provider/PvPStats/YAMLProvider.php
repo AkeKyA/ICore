@@ -5,13 +5,13 @@ namespace AkeKy\provider\PvPStats;
 use pocketmine\IPlayer;
 use pocketmine\utils\Config;
 
-use CrazedMiner\Main;
+use AkeKy\ICore;
 
 class YAMLProvider implements ProviderInterface{
     
     protected $plugin;
 
-    public function __construct(Main $plugin){
+    public function __construct(ICore $plugin){
         $this->plugin = $plugin;
         @mkdir($this->plugin->getDataFolder()."playerspvpstats/");
         $this->plugin->getLogger()->info("§r§aData PvPStats Provider set to §r§6YAML§r§a!");
