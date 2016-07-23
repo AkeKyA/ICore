@@ -18,7 +18,7 @@ class MySQLDataProvider implements DataProvider{
 
 	public function __construct(ICore $plugin){
 		$this->plugin = $plugin;
-		$config = $this->plugin->getConfig()->get("SimpleAuthdataProvider");
+		$config = $this->plugin->getConfig()->get("SimplAuthdataProviderSettings");
 
 		if(!isset($config["host"]) or !isset($config["user"]) or !isset($config["password"]) or !isset($config["database"])){
 			$this->plugin->getLogger()->critical("Invalid MySQL settings");
@@ -33,7 +33,7 @@ class MySQLDataProvider implements DataProvider{
 			return;
 		}
 
-		$resource = $this->plugin->getResource("mysql.sql");
+		$resource = $this->plugin->getResource("mysqlsimpleauth.sql");
 		$this->database->query(stream_get_contents($resource));
 		fclose($resource);
 

@@ -45,13 +45,13 @@ self-command-format: "§r§6Your Stats:\n§r§o§e- §r§aKills: §r§l§6@kills
 SimpleAuthdataProvider: yaml
 
 #For MySQL:
-#dataProviderSettings:
+#SimplAuthdataProviderSettings:
 # host: "127.0.0.1"
 # port: 3306
 # user: "user"
 # password: "password"
 # database: "databaseName"
-dataProviderSettings: []
+SimplAuthdataProviderSettings: []
 
 #If enabled, existing logged-in accounts won't be kicked if a new player joins with the same name
 forceSingleSession: true
