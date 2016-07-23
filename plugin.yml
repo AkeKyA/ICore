@@ -39,6 +39,9 @@ commands:
  vd:
   permission: vd
   description: '§bDisable Hidden'
+ stats:
+  permission: stats
+  description: '§bCheck scores'
 permissions:
  login:
   default: true
@@ -60,3 +63,5 @@ permissions:
   default: op
  vd:
   default: op
+ stats:
+  default: true
