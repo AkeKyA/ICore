@@ -44,12 +44,15 @@ class EventListener implements Listener{
     }
 
 	public function onPlayerJoin(PlayerJoinEvent $event){
-		$config = $this->plugin->getDataProvider()->getPlayer($event->getPlayer());
+		$config = $this->plugin->getSimpleAuthDataProvider()->getPlayer($event->getPlayer());
 		if($config !== null and $config["lastip"] === $event->getPlayer()->getUniqueId()->toString()){
 			$this->plugin->authenticatePlayer($event->getPlayer());
 		}else{
 			$this->plugin->deauthenticatePlayer($event->getPlayer());
 		}
+        if(!$this->plugin->playerExists($event->getPlayer())){
+            $this->plugin->addPlayer($event->getPlayer());
+        }
 	}
 
 	public function onPlayerPreLogin(PlayerPreLoginEvent $event){
@@ -156,6 +159,8 @@ class EventListener implements Listener{
                 $killer->sendMessage('§b- §eYou kill §6'.$event->getEntity()->getName().'§e.');
                 $killer->sendMessage('    §eYou earn §a100 §bCoins§e.');
                 $killer->setHealth(20);
+                $this->plugin->updatePlayer($event->getEntity(), "deaths");
+                $this->plugin->updatePlayer($killer, "kills");
             }
         }
     }
