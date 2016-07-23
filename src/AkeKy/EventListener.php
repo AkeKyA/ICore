@@ -155,9 +155,9 @@ class EventListener implements Listener{
                 $this->economy->addMoney($killer->getName(), 100);
                 $this->economy->addMoney($event->getEntity()->getName(), 25);
                 $event->getPlayer()->sendMessage('§b- §aYou kill by §c'.$killer->getName().'§a.');
-                $event->getPlayer()->sendMessage('    §eYou earn §a25 §bCoins§e.');
+                $event->getPlayer()->sendMessage('   §eYou earn §a25 §bCoins§e.');
                 $killer->sendMessage('§b- §eYou kill §6'.$event->getEntity()->getName().'§e.');
-                $killer->sendMessage('    §eYou earn §a100 §bCoins§e.');
+                $killer->sendMessage('   §eYou earn §a100 §bCoins§e.');
                 $killer->setHealth(20);
                 $this->plugin->updatePlayer($event->getEntity(), "deaths");
                 $this->plugin->updatePlayer($killer, "kills");
