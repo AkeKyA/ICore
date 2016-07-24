@@ -15,6 +15,7 @@ use pocketmine\event\player\PlayerDeathEvent;
 use pocketmine\event\player\PlayerDropItemEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\event\player\PlayerKickEvent;
 use pocketmine\event\player\PlayerLoginEvent;
 use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\event\player\PlayerPreLoginEvent;
@@ -41,6 +42,14 @@ class EventListener implements Listener{
 
     public function onPlayerLogin(PlayerLoginEvent $event){
         $event->getPlayer()->teleport($this->plugin->getServer()->getDefaultLevel()->getSafeSpawn());
+    }
+
+    public function onPlayerKick(PlayerKickEvent $event){
+        if($event->getReason() === "disconnectionScreen.serverFull"){
+            if($this->plugin->getPlayerVips(strtolower($event->getPlayer()->getName()))){
+                $event->setCancelled(true);
+            }
+        }
     }
 
 	public function onPlayerJoin(PlayerJoinEvent $event){

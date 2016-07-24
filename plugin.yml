@@ -42,6 +42,9 @@ commands:
  stats:
   permission: stats
   description: '§bCheck scores'
+ vips:
+  permission: vips
+  description: '§bAdd Vips'
 permissions:
  login:
   default: true
@@ -65,3 +68,5 @@ permissions:
   default: op
  stats:
   default: true
+ vips:
+  default: op

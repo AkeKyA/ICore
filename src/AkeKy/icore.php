@@ -28,6 +28,8 @@ use AkeKy\provider\PvPStats\MySQLProvider;
 
 class ICore extends PluginBase{
 
+    public $vips;
+
     /** @var PermissionAttachment[] */
     protected $needAuth = [];
 
@@ -225,6 +227,54 @@ class ICore extends PluginBase{
         return $this->ppvpstats->updatePlayer($player, $type);
     }
 
+    public function getPlayerVips($name){
+        return $this->vips->exists($name);
+    }
+
+    /*****************
+    *================*
+    *==[ Non-APIs ]==*
+    *================*
+    *****************/
+
+    private function getValidPlayerVips($target){
+        $player = $this->getServer()->getPlayer($target);
+        return $player instanceof Player ? $player : $this->getServer()->getOfflinePlayer($target);
+    }
+
+    /*****************
+    *================*
+    *==[   APIs   ]==*
+    *================*
+    *****************/
+
+    public function addPlayerVips($player){
+        $target = $this->getValidPlayerVips($player);
+        if($target instanceof Player){
+            $p = strtolower($target->getName());
+        }else{
+            $p = strtolower($player);
+        }
+        if($this->vips->exists($p)) return false;
+        $this->vips->set($p, true);
+        $this->vips->save();
+
+        return true;
+    }
+
+    public function removePlayerVips($player){
+        $target = $this->getValidPlayerVips($player);
+        if($target instanceof Player){
+            $p = strtolower($target->getName());
+        }else{
+            $p = strtolower($player);
+        }
+        if(!$this->vips->exists($p)) return false;
+        $this->vips->remove($p);
+        $this->vips->save();
+        return true;
+    }
+
     /* -------------------------- Non-API part -------------------------- */
 
     public function closePlayer(Player $player){
@@ -383,6 +433,63 @@ class ICore extends PluginBase{
                     }
                 }
                 break;
+            case "vips":
+                if(!isset($args[0]) || count($args) > 2){
+                    $sender->sendMessage("Usage: /vips <add/remove/list>");
+                    return true;
+                }
+                switch(strtolower($args[0])){
+                    case "add":
+                        if(isset($args[1])){
+                            $who_player = $this->getValidPlayerVips($args[1]);
+                            if($who_player instanceof Player){
+                                $target = $who_player->getName();
+                            }else{
+                                $target = $args[1];
+                            }
+                            if($this->addPlayerVips($target)){
+                                $sender->sendMessage("Successfully added '$target' on VIPSlots!");
+                            }else{
+                                $sender->sendMessage("$target is already added on VIPSlots!");
+                            }
+                        }else{
+                            $sender->sendMessage("Usage: /vips add <player>");
+                        }
+                        break;
+                    case "remove":
+                        if(isset($args[1])){
+                            $who_player = $this->getValidPlayerVips($args[1]);
+                            if($who_player instanceof Player){
+                                $target = $who_player->getName();
+                            }else{
+                                $target = $args[1];
+                            }
+                            if($this->removePlayerVips($target)){
+                                $sender->sendMessage("Successfully removed '$target' on VIPSlots!");
+                            }else{
+                                $sender->sendMessage("$target doesn't exist on VIPSlots!");
+                            }
+                        }else{
+                            $sender->sendMessage("Usage: /vips remove <player>");
+                        }
+                        break;
+                    case "list":
+                        $file = fopen($this->getDataFolder() . "vip_players.txt", "r");
+                        $i = 0;
+                        while(!feof($file)){
+                            $vips[] = fgets($file);
+                        }
+                        fclose($file);
+                        $sender->sendMessage("-==[ VIPSlots List ]==-");
+                        foreach ($vips as $vip){
+                            $sender->sendMessage(" - " . $vip);
+                        }
+                        break;
+                    default:
+                        $sender->sendMessage("Usage: /vips <add/remove/list>");
+                        break;
+                }
+                break;
         }
         return false;
     }
@@ -394,7 +501,7 @@ class ICore extends PluginBase{
         $this->blockPlayers = (int) $this->getConfig()->get("blockAfterFail", 6);
         $this->othercommandformat = $this->getConfig()->get("other-command-format");
         $this->selfcommandformat = $this->getConfig()->get("self-command-format");
-
+        $this->vips = new Config($this->getDataFolder()."vip_players.txt", Config::ENUM, array());
         $ppvpstats = $this->getConfig()->get("PvPStatsdataProvider");
         unset($this->ppvpstats);
         switch(strtolower($ppvpstats)){
