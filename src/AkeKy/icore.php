@@ -28,8 +28,6 @@ use AkeKy\provider\PvPStats\MySQLProvider;
 
 class ICore extends PluginBase{
 
-    public $vips;
-
     /** @var PermissionAttachment[] */
     protected $needAuth = [];
 
