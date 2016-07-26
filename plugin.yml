@@ -45,6 +45,12 @@ commands:
  vips:
   permission: vips
   description: '§bAdd Vips'
+ restart:
+  permission: restart
+  description: '§bTime to Restart'
+ asr:
+  permission: asr
+  description: '§bSet Time to Restart'
 permissions:
  login:
   default: true
@@ -69,4 +75,8 @@ permissions:
  stats:
   default: true
  vips:
+  default: op
+ restart:
+  default: true
+ asr:
   default: op

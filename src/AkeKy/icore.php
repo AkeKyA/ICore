@@ -26,7 +26,12 @@ use AkeKy\provider\PvPStats\ProviderInterface;
 use AkeKy\provider\PvPStats\YAMLProvider;
 use AkeKy\provider\PvPStats\MySQLProvider;
 
+use AkeKy\task\CallbackTask;
+
 class ICore extends PluginBase{
+
+    public $count_down = 60; //secs
+    public $time_count = array();
 
     /** @var PermissionAttachment[] */
     protected $needAuth = [];
@@ -273,6 +278,67 @@ class ICore extends PluginBase{
         return true;
     }
 
+    public function setValueTimer($value){
+        $this->getConfig()->set("TimeToRestart", $value);
+        $this->getConfig()->save();
+    }
+    
+    public function getTimer(){
+        if(isset($this->time_count['time'])){
+            return $this->time_count['time'];
+        }else{
+            $this->setTimer($this->restart_time);
+            return $this->time_count['time'];
+        }
+    }
+    
+    public function setTimer($time){
+        if(isset($this->time_count['time'])){
+            unset($this->time_count['time']);
+            $this->time_count['time'] = "$time";
+        }else{
+            $this->time_count['time'] = "$time";
+        }
+    }
+
+    public function initial_start($timer){
+        if($timer == 1){
+            $this->start($this->restart_time + 1);
+            return;
+        }else{
+            $timer--;
+            $this->getServer()->getScheduler()->scheduleDelayedTask(new CallbackTask([$this,"initial_start" ], [$timer]), 20);
+        }
+    }
+    
+    public function start($time_target){
+        $time_target--;
+        $this->getServer()->broadcastMessage("§7.\n§aServer§7> §fเซิฟเวอร์จะรีสตาร์ทใน§b $time_target §fนาที\n§7.");
+        if($time_target == 1){
+            $this->count_down($this->count_down + 1);
+            return;
+        }
+        $this->setTimer($time_target);
+        $this->getServer()->getScheduler()->scheduleDelayedTask(new CallbackTask([$this,"start" ], [$time_target]), 1200);
+    }
+
+    public function count_down($seconds){
+        if($seconds == 2){
+            foreach($this->getServer()->getOnlinePlayers() as $p){
+                $p->close('', '§bเซิฟเวอร์รีสตาร์ท');
+            }
+            $this->getServer()->shutdown();
+            return;
+        }else{
+            $seconds--;
+            $this->setTimer($seconds);
+            if($seconds == 30) $this->getServer()->broadcastMessage("§7.\n§aServer§7> §fเซิฟเวอร์จะรีสตาร์ทใน§b $seconds §fวินาที\n§7.");
+            if($seconds == 10) $this->getServer()->broadcastMessage("§7.\n§aServer§7> §fเซิฟเวอร์จะรีสตาร์ทใน§b $seconds §fวินาที\n§7.");
+            if($seconds < 6) $this->getServer()->broadcastMessage("§7.\n§aServer§7> §fเซิฟเวอร์จะรีสตาร์ทใน§b $seconds.\n§7.");
+            $this->getServer()->getScheduler()->scheduleDelayedTask(new CallbackTask([$this,"count_down"], [$seconds]), 20);
+        }
+    }
+
     /* -------------------------- Non-API part -------------------------- */
 
     public function closePlayer(Player $player){
@@ -488,14 +554,33 @@ class ICore extends PluginBase{
                         break;
                 }
                 break;
+            case "restart":
+                $time = $this->getTimer();
+                $sender->sendMessage("[ASR] The server will restart in $time");
+                break;
+            case "asr":
+                if(isset($args[0])){
+                    if(!is_numeric($args[0])){
+                        $sender->sendMessage("[ASR] Only Numbers is prohibited.");
+                        return;
+                    }
+                    $this->setValueTimer($args[0]);
+                    $sender->sendMessage("[ASR] You have set the timer to " . $args[0] . " min/s. The changes will apply after the next server restart.");
+                }else{
+                    $sender->sendMessage("Usage: /asr <value>");
+                }
+                break;
         }
         return false;
     }
 
     public function onEnable(){
+        //Task
+        $this->initial_start(2); //its obviously 1 sec but idk why xD
         $this->saveDefaultConfig();
         $this->reloadConfig();
 
+        $this->restart_time = $this->getConfig()->get("TimeToRestart");
         $this->blockPlayers = (int) $this->getConfig()->get("blockAfterFail", 6);
         $this->othercommandformat = $this->getConfig()->get("other-command-format");
         $this->selfcommandformat = $this->getConfig()->get("self-command-format");
