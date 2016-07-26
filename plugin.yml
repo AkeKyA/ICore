@@ -48,9 +48,6 @@ commands:
  restart:
   permission: restart
   description: '§bTime to Restart'
- asr:
-  permission: asr
-  description: '§bSet Time to Restart'
 permissions:
  login:
   default: true
@@ -78,5 +75,3 @@ permissions:
   default: op
  restart:
   default: true
- asr:
-  default: op

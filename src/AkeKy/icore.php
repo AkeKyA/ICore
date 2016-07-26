@@ -278,11 +278,6 @@ class ICore extends PluginBase{
         return true;
     }
 
-    public function setValueTimer($value){
-        $this->getConfig()->set("TimeToRestart", $value);
-        $this->getConfig()->save();
-    }
-    
     public function getTimer(){
         if(isset($this->time_count['time'])){
             return $this->time_count['time'];
@@ -557,18 +552,6 @@ class ICore extends PluginBase{
             case "restart":
                 $time = $this->getTimer();
                 $sender->sendMessage("[ASR] The server will restart in $time");
-                break;
-            case "asr":
-                if(isset($args[0])){
-                    if(!is_numeric($args[0])){
-                        $sender->sendMessage("[ASR] Only Numbers is prohibited.");
-                        return;
-                    }
-                    $this->setValueTimer($args[0]);
-                    $sender->sendMessage("[ASR] You have set the timer to " . $args[0] . " min/s. The changes will apply after the next server restart.");
-                }else{
-                    $sender->sendMessage("Usage: /asr <value>");
-                }
                 break;
         }
         return false;
