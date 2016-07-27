@@ -10,6 +10,7 @@ use pocketmine\entity\Effect;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\Listener;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerCommandPreprocessEvent;
 use pocketmine\event\player\PlayerDeathEvent;
 use pocketmine\event\player\PlayerDropItemEvent;
@@ -22,6 +23,7 @@ use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\Player;
 use pocketmine\tile\Sign;
+use AkeKy\task\ChatSession;
 
 class EventListener implements Listener{
 	/** @var ICore */
@@ -77,6 +79,16 @@ class EventListener implements Listener{
         }
     }
 
+    public function onChat(PlayerChatEvent $event){
+        if(!isset($this->sessions[$event->getPlayer()->getName()])){
+            $this->sessions[$event->getPlayer()->getName()] = new ChatSession($this->plugin);
+            $this->sessions[$event->getPlayer()->getName()]->bindToPlayer($event->getPlayer());
+        }
+        if(!$this->sessions[$event->getPlayer()->getName()]->sendMessage($event->getMessage())){
+            $event->setCancelled(true);
+        }
+    }
+
 	public function onPlayerCommand(PlayerCommandPreprocessEvent $event){
 		if(!$this->plugin->isPlayerAuthenticated($event->getPlayer())){
 			$message = $event->getMessage();
@@ -115,6 +127,9 @@ class EventListener implements Listener{
 	}
 
 	public function onPlayerQuit(PlayerQuitEvent $event){
+        if(isset($this->sessions[$event->getPlayer()->getName()])){
+            unset($this->sessions[$event->getPlayer()->getName()]);
+        }
 		$this->plugin->closePlayer($event->getPlayer());
 	}
 
