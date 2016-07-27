@@ -39,6 +39,7 @@ class EventListener implements Listener{
         $this->canclebp = $this->plugin->getConfig()->get("block-CancleBP");
         $this->blocknoupdate = $this->plugin->getConfig()->get("block-NoUpdate");
         $this->worldnopvp = $this->plugin->getConfig()->get("world-NoPvP");
+        $this->inairticks = $this->plugin->getConfig()->get("TimeInAir") * 20;
         $this->economy = $this->plugin->getServer()->getPluginManager()->getPlugin("EconomyAPI");
 	}
 
@@ -113,7 +114,7 @@ class EventListener implements Listener{
         }
         if($event->isCancelled() or $event->getPlayer()->isCreative() or $event->getPlayer()->isSpectator() or $event->getPlayer()->getAllowFlight() or $event->getPlayer()->hasEffect(Effect::JUMP)){
         }else{
-            if($event->getPlayer()->getInAirTicks() >= 60){
+            if($event->getPlayer()->getInAirTicks() >= $this->inairticks){
                 $event->getPlayer()->kick('§l§cYou have been kicked for fly hacks!§r §o§6Please disable mods to play.§r', false);
                 return;
             }
