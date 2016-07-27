@@ -98,3 +98,9 @@ ratelimit: 1
 baseblocklength: 30
   # Block length in seconds
   # Will increase with repeated blocks
+###############
+# Broadcaster #
+###############
+time: 10
+messages:
+ - "§8§l.\n§a1\n§8§l."

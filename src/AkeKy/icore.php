@@ -25,7 +25,7 @@ use AkeKy\provider\SimpleAuth\YAMLDataProvider;
 use AkeKy\provider\PvPStats\ProviderInterface;
 use AkeKy\provider\PvPStats\YAMLProvider;
 use AkeKy\provider\PvPStats\MySQLProvider;
-
+use AkeKy\task\BroadcasterTask;
 use AkeKy\task\CallbackTask;
 
 class ICore extends PluginBase{
@@ -565,6 +565,7 @@ class ICore extends PluginBase{
 
         $this->restart_time = $this->getConfig()->get("TimeToRestart");
         $this->blockPlayers = (int) $this->getConfig()->get("blockAfterFail", 6);
+        $this->time = (int) $this->getConfig()->get("time") * 20;
         $this->othercommandformat = $this->getConfig()->get("other-command-format");
         $this->selfcommandformat = $this->getConfig()->get("self-command-format");
         $this->vips = new Config($this->getDataFolder()."vip_players.txt", Config::ENUM, array());
@@ -612,6 +613,7 @@ class ICore extends PluginBase{
 
         $this->listener = new EventListener($this);
         $this->getServer()->getPluginManager()->registerEvents($this->listener, $this);
+        $this->task = $this->getServer()->getScheduler()->scheduleRepeatingTask(new BroadcasterTask($this), $this->time);
 
         foreach($this->getServer()->getOnlinePlayers() as $player){
             $this->deauthenticatePlayer($player);
