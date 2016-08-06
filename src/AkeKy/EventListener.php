@@ -65,6 +65,7 @@ class EventListener implements Listener{
         if(!$this->plugin->playerExists($event->getPlayer())){
             $this->plugin->addPlayer($event->getPlayer());
         }
+        $event->setJoinMessage('');
 	}
 
 	public function onPlayerPreLogin(PlayerPreLoginEvent $event){
@@ -128,6 +129,7 @@ class EventListener implements Listener{
 	}
 
 	public function onPlayerQuit(PlayerQuitEvent $event){
+        $event->setQuitMessage('');
         if(isset($this->sessions[$event->getPlayer()->getName()])){
             unset($this->sessions[$event->getPlayer()->getName()]);
         }
@@ -188,6 +190,7 @@ class EventListener implements Listener{
                 $this->plugin->updatePlayer($killer, "kills");
             }
         }
+        $event->setDeathMessage('');
     }
 
     public function playerBlockTouch(PlayerInteractEvent $event){
