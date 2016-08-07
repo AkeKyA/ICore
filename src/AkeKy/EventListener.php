@@ -5,7 +5,6 @@ namespace AkeKy;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\block\BlockUpdateEvent;
-use pocketmine\event\block\SignChangeEvent;
 use pocketmine\entity\Effect;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
@@ -14,15 +13,12 @@ use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerCommandPreprocessEvent;
 use pocketmine\event\player\PlayerDeathEvent;
 use pocketmine\event\player\PlayerDropItemEvent;
-use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerKickEvent;
-use pocketmine\event\player\PlayerLoginEvent;
 use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\Player;
-use pocketmine\tile\Sign;
 use AkeKy\task\ChatSession;
 
 class EventListener implements Listener{
@@ -32,7 +28,6 @@ class EventListener implements Listener{
     private $canclebp;
     private $blocknoupdate;
     private $worldnopvp;
-    private $economy;
 
 	public function __construct(ICore $plugin){
 		$this->plugin = $plugin;
@@ -40,12 +35,7 @@ class EventListener implements Listener{
         $this->blocknoupdate = $this->plugin->getConfig()->get("block-NoUpdate");
         $this->worldnopvp = $this->plugin->getConfig()->get("world-NoPvP");
         $this->inairticks = $this->plugin->getConfig()->get("TimeInAir") * 20;
-        $this->economy = $this->plugin->getServer()->getPluginManager()->getPlugin("EconomyAPI");
 	}
-
-    public function onPlayerLogin(PlayerLoginEvent $event){
-        $event->getPlayer()->teleport($this->plugin->getServer()->getDefaultLevel()->getSafeSpawn());
-    }
 
     public function onPlayerKick(PlayerKickEvent $event){
         if($event->getReason() === "disconnectionScreen.serverFull"){
@@ -177,67 +167,12 @@ class EventListener implements Listener{
         if($cause instanceof EntityDamageByEntityEvent){
             $killer = $cause->getDamager();
             if($killer instanceof Player){
-                $this->economy->addMoney($killer->getName(), 100);
-                $this->economy->addMoney($event->getEntity()->getName(), 25);
                 $event->getPlayer()->sendMessage('§b- §aYou kill by §c'.$killer->getName().'§a.');
-                $event->getPlayer()->sendMessage('   §eYou earn §a25 §bCoins§e.');
                 $killer->sendMessage('§b- §eYou kill §6'.$event->getEntity()->getName().'§e.');
-                $killer->sendMessage('   §eYou earn §a100 §bCoins§e.');
                 $killer->setHealth(20);
                 $this->plugin->updatePlayer($event->getEntity(), "deaths");
                 $this->plugin->updatePlayer($killer, "kills");
             }
         }
-    }
-
-    public function playerBlockTouch(PlayerInteractEvent $event){
-        if($event->getBlock()->getID() == 323 || $event->getBlock()->getID() == 63 || $event->getBlock()->getID() == 68){
-            $sign = $event->getPlayer()->getLevel()->getTile($event->getBlock());
-            if(!($sign instanceof Sign)){
-                return;
-            }
-            $sign = $sign->getText();
-            if($sign[0] == '§l§aWORLD'){
-                if(empty($sign[1]) !== true){
-                    $mapname = $sign[1];
-                    if($this->plugin->getServer()->loadLevel($mapname) != false){
-                        $event->getPlayer()->sendMessage('§aTeleporting...');
-                        $event->getPlayer()->teleport($this->plugin->getServer()->getLevelByName($mapname)->getSafeSpawn());
-                    }else{
-                        $event->getPlayer()->sendMessage("[SignPortal] World '".$mapname."' not found.");
-                    }
-                }
-            }
-        }
-    }
-
-    public function tileupdate(SignChangeEvent $event){
-        if($event->getBlock()->getID() == 323 || $event->getBlock()->getID() == 63 || $event->getBlock()->getID() == 68){
-            $sign = $event->getPlayer()->getLevel()->getTile($event->getBlock());
-            if(!($sign instanceof Sign)){
-                return true;
-            }
-            $sign = $event->getLines();
-            if($sign[0] == '§l§aWORLD'){
-                if($event->getPlayer()->isOp()){
-                    if(empty($sign[1]) !== true){
-                        if($this->plugin->getServer()->loadLevel($sign[1]) !== false){
-                            $event->getPlayer()->sendMessage("[SignPortal] Portal to world '".$sign[1]."' created");
-                            return true;
-                        }
-                        $event->getPlayer()->sendMessage("[SignPortal] World '".$sign[1]."' does not exist!");
-                        $event->setLine(0,"[BROKEN]");
-                        return false;
-                    }
-                    $event->getPlayer()->sendMessage("[SignPortal] World name not set");
-                    $event->setLine(0,"[BROKEN]");
-                    return false;
-                }
-                $event->getPlayer()->sendMessage("[SignPortal] You must be an OP to make a portal");
-                $event->setLine(0,"[BROKEN]");
-                return false;
-            }
-        }
-        return true;
     }
 }
